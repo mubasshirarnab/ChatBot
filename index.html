@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>MediAI ChatBot</title>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" />
+		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+		<style>
+			:root {
+				--primary-color: #2196F3;
+				--secondary-color: #E3F2FD;
+				--text-color: #333;
+				--bg-color: #f5f5f5;
+			}
+
+			body {
+				background-color: var(--bg-color);
+				height: 100vh;
+				margin: 0;
+				font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			}
+
+			.chat-container {
+				max-width: 1000px;
+				margin: 2.5% auto;
+				height: 90vh;
+				display: flex;
+				flex-direction: column;
+				background-color: white;
+				box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+			}
+
+			.chat-header {
+				background-color: var(--primary-color);
+				color: white;
+				padding: 1rem;
+				text-align: center;
+				box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			}
+
+			.chat-header h2 {
+				margin: 0;
+				font-size: 1.5rem;
+			}
+
+			.chat-messages {
+				flex: 1;
+				overflow-y: auto;
+				padding: 1rem;
+				display: flex;
+				flex-direction: column;
+				gap: 1rem;
+			}
+
+			.message {
+				max-width: 70%;
+				padding: 0.8rem 1rem;
+				border-radius: 1rem;
+				position: relative;
+				animation: fadeIn 0.3s ease-in-out;
+			}
+
+			@keyframes fadeIn {
+				from { opacity: 0; transform: translateY(10px); }
+				to { opacity: 1; transform: translateY(0); }
+			}
+
+			.user-message {
+				background-color: var(--primary-color);
+				color: white;
+				align-self: flex-end;
+				border-bottom-right-radius: 0.2rem;
+			}
+
+			.bot-message {
+				background-color: var(--secondary-color);
+				color: var(--text-color);
+				align-self: flex-start;
+				border-bottom-left-radius: 0.2rem;
+			}
+
+			.chat-input-container {
+				padding: 1rem;
+				background-color: white;
+				border-top: 1px solid #eee;
+				display: flex;
+				gap: 0.5rem;
+			}
+
+			#userInput {
+				flex: 1;
+				padding: 0.8rem;
+				border: 2px solid #e0e0e0;
+				border-radius: 1.5rem;
+				transition: border-color 0.3s ease;
+			}
+
+			#userInput:focus {
+				outline: none;
+				border-color: var(--primary-color);
+			}
+
+			.send-button {
+				background-color: var(--primary-color);
+				color: white;
+				border: none;
+				border-radius: 1.5rem;
+				padding: 0.8rem 1.5rem;
+				cursor: pointer;
+				transition: transform 0.2s ease, background-color 0.2s ease;
+			}
+
+			.send-button:hover {
+				background-color: #1976D2;
+				transform: scale(1.05);
+			}
+
+			.send-button:active {
+				transform: scale(0.95);
+			}
+
+			/* Markdown Styling */
+			.bot-message p {
+				margin: 0;
+				line-height: 1.5;
+			}
+
+			.bot-message ul {
+				padding-left: 20px;
+				margin: 0.5rem 0;
+			}
+
+			.bot-message li {
+				margin-bottom: 0.3rem;
+			}
+
+			.bot-message strong {
+				color: #1976D2;
+			}
+
+			/* Scrollbar Styling */
+			.chat-messages::-webkit-scrollbar {
+				width: 6px;
+			}
+
+			.chat-messages::-webkit-scrollbar-track {
+				background: #f1f1f1;
+			}
+
+			.chat-messages::-webkit-scrollbar-thumb {
+				background: #888;
+				border-radius: 3px;
+			}
+
+			.chat-messages::-webkit-scrollbar-thumb:hover {
+				background: #555;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="chat-container">
+			<div class="chat-header">
+				<h2>MediAI ChatBot</h2>
+			</div>
+			<div class="chat-messages" id="chat-messages"></div>
+			<div class="chat-input-container">
+				<input
+					type="text"
+					class="form-control"
+					id="userInput"
+					placeholder="Type your message here..."
+					onkeypress="if(event.key === 'Enter') sendMessage()" />
+				<button class="send-button" onclick="sendMessage()">Send</button>
+			</div>
+		</div>
+		<script>
+			async function sendMessage() {
+				const inputElement = document.getElementById('userInput');
+				let message = inputElement.value.trim();
+		
+				// Append filtering instructions
+				message += ". This is the prompt. If the prompt is 'Medical Assistance, Mental Consultancy' and 'Greetings' related then just respond to the prompt. Otherwise, show - 'I'm not allowed to answer this question.'.";
+		
+				const messagesDiv = document.getElementById('chat-messages');
+		
+				if (!message.trim()) return;
+		
+				// Add user message
+				const userMessageDiv = document.createElement('div');
+				userMessageDiv.className = 'message user-message';
+				userMessageDiv.textContent = inputElement.value.trim();
+				messagesDiv.appendChild(userMessageDiv);
+		
+				inputElement.value = '';
+		
+				// Add loading message
+				const loadingDiv = document.createElement('div');
+				loadingDiv.className = 'message bot-message';
+				loadingDiv.textContent = 'Thinking...';
+				messagesDiv.appendChild(loadingDiv);
+		
+				messagesDiv.scrollTop = messagesDiv.scrollHeight;
+		
+				try {
+					const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+						method: 'POST',
+						headers: {
+							Authorization: 'Bearer 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',
+							'Content-Type': 'application/json',
+							'X-Title': 'SiteName',
+						},
+						body: JSON.stringify({
+							model: 'deepseek/deepseek-r1:free',
+							messages: [{ role: 'user', content: message }],
+						}),
+					});
+					const data = await response.json();
+					const markdownText = data.choices?.[0]?.message?.content || 'No response received.';
+					loadingDiv.innerHTML = marked.parse(markdownText);
+				} catch (error) {
+					loadingDiv.textContent = 'Error: ' + error.message;
+				}
+		
+				messagesDiv.scrollTop = messagesDiv.scrollHeight;
+			}
+		
+			document.addEventListener('DOMContentLoaded', () => {
+				document.getElementById('userInput').focus();
+			});
+		</script>
+		
+	</body>
+</html>
